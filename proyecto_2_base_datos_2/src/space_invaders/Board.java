@@ -3,13 +3,14 @@ package space_invaders;
 import javax.swing.JPanel;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.Color;
 
 // timer
 import javax.swing.Timer;
 
 import org.apache.commons.lang3.time.StopWatch;
-
+import org.postgis.PGgeometry;
 import java.awt.Toolkit;
 
 // teclas y timer
@@ -22,7 +23,9 @@ import java.awt.event.KeyEvent;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.awt.Font;
 
@@ -41,13 +44,12 @@ public class Board extends JPanel implements ActionListener {
     private Alien alien[][];
     private final int ALIENCOLUMNS, ALIENROWS, ALIEN_STARTX, ALIEN_STARTY, ALIEN_PADDING;
     private Font font;
-    private String msg, coordinates, points, bullets, collision, status, aliens, time, game, stm;
-    private int aliensLeft, pts, POINTS;
+    private String distance, coordinates, area, points, bullets, collision, status, color_ship, color_alien, aliens, alien_name, time, game, ship_table, alien_table, ship_name, ship_polygon, left_rect_polygon, right_rect_polygon, alien_polygon, figure_table;
+    private int aliensLeft, pts, POINTS, xx, yy, xxw, yyh, elapsedTime;
     private boolean gameEnded, collisioned, gameWon;
     private StopWatch sw;
-    PreparedStatement pst;
-    
-    Connection c;
+    private Rectangle game_rect, left_rect, right_rect, aliens_rect;
+    private float  result_distance, result_area;
     
     public Board(){
         setDoubleBuffered(true);
@@ -66,6 +68,7 @@ public class Board extends JPanel implements ActionListener {
         ALIEN_PADDING = 3;
         POINTS = 10000;
         pts = 0;
+        result_distance = 0;
         
         alien = new Alien[ALIENCOLUMNS][ALIENROWS];
         for(int i = 0; i < ALIENCOLUMNS; i++)
@@ -95,21 +98,75 @@ public class Board extends JPanel implements ActionListener {
         game = "Game won: " + gameWon;
         points = "Total points: " + POINTS;
         
+        game_rect = new Rectangle(17, 15, 241, 255);
+        
+        ship_name = "BugsBoni-F78";
+        color_ship = "Red";
+        color_alien = "Red";
+        alien_name = "Morontas";
+        distance = "Distance between ship and aliens: " + result_distance;
+        area = "Area of the ship is: " + result_area;
+        
+        PreparedStatement pst_figure = null;
+        Connection c = null;
+        
+        figure_table = "INSERT INTO figure (name, polygon) values (?, ?)";
+
+        left_rect_polygon = "SRID=4326;POLYGON((" + game_rect.x + " " + game_rect.y + ", " + game_rect.x + " " + 600 + ", " + -400 + " " + 600 + ", " + -400 + " " + game_rect.y + ", " + game_rect.x + " " + game_rect.y + "))";
+        right_rect_polygon = "SRID=4326;POLYGON((" + (game_rect.x + game_rect.width) + " " + game_rect.y + ", " + 700 + " " + game_rect.y + ", " + 700 + " " + 600 + ", " + (game_rect.x + game_rect.width) + " " + 600 + ", " + (game_rect.x + game_rect.width) + " " + game_rect.y + "))";
+        
         try {
-			c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
-		} catch (SQLException e) {
+        	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
+        	
+        	//Figure table
+        	pst_figure = c.prepareStatement(figure_table);
+        	pst_figure.setString(1, "Left_Rectangle");
+			pst_figure.setObject(2, new PGgeometry(left_rect_polygon));
+			pst_figure.executeUpdate();
+			
+			
+		} catch (SQLException ex) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			ex.printStackTrace();
+		} finally {
+			try {
+                if (pst_figure != null) {
+                	pst_figure.close();
+                }
+                if (c != null) {
+                    c.close();
+                }
+
+            } catch (SQLException ex) {
+                
+            }
 		}
         
-        stm = "INSERT INTO game(ship_coordinates, ship, left_rect, right_rect, time_elapsed, game_over, total_bullets, aliens_left, collision, game_won, total_points) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
         try {
-			pst = c.prepareStatement(stm);
+        	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
+        	
+        	//Figure table
+        	pst_figure = c.prepareStatement(figure_table);
+        	pst_figure.setString(1, "Right_Rectangle");
+			pst_figure.setObject(2, new PGgeometry(right_rect_polygon));
+			pst_figure.executeUpdate();
 			
-		} catch (SQLException e) {
+			
+		} catch (SQLException ex) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			ex.printStackTrace();
+		} finally {
+			try {
+                if (pst_figure != null) {
+                	pst_figure.close();
+                }
+                if (c != null) {
+                    c.close();
+                }
+
+            } catch (SQLException ex) {
+                
+            }
 		}
     }
 
@@ -144,7 +201,6 @@ public class Board extends JPanel implements ActionListener {
         // Draw text
         g2d.setColor(Color.black);
         g2d.setFont(font);
-        g2d.drawString(msg, 3, 12);
         
         g2d.drawString(time, 265, 24);
         g2d.drawString(coordinates, 265, 40);
@@ -154,8 +210,11 @@ public class Board extends JPanel implements ActionListener {
         g2d.drawString(collision, 265, 104);
         g2d.drawString(game, 265, 120);
         g2d.drawString(points, 265, 136);
+        
+        g2d.drawString(distance, 18, 290);
+        g2d.drawString(area, 18, 306);
     
-        g2d.drawRect(17, 15, 241, 300);
+        g2d.draw(game_rect);
         g2d.drawLine(17, 250, 258, 250);
 
         Toolkit.getDefaultToolkit().sync();
@@ -218,20 +277,104 @@ public class Board extends JPanel implements ActionListener {
         }
         
         //update points
-        POINTS = (int) (POINTS - (sw.getTime() / 1000));
+        POINTS = (int) (POINTS - (sw.getTime() / 1000) * 2);
         
-        if(!gameEnded)
-            msg = "Time: ";
+        //update time
+        elapsedTime = (int) (sw.getTime() / 1000);
+        
+        if(!gameEnded) {
+		}
         
         coordinates = "Coordinates: " + ship.getX() + ", " + ship.getY();
         status = "Game over: " + gameEnded;
         bullets = "Total bullets shooted: " + ship.getBulletsShooted();
         aliens = "Aliens left: " + aliensLeft;
         collision = "Collision: " + collisioned;
-        time = "Time elapsed: " + sw.getTime() / 1000;
+        time = "Time elapsed: " + elapsedTime;
         game = "Game won: " + gameWon;
         points = "Total points: " + pts;
+        distance = "Distance between ship and aliens: " + result_distance;
+        area = "Area of the ship is: " + result_area;
         repaint();
+        
+        xx = ship.getBounds().x;
+        yy = ship.getBounds().y;
+        xxw = ship.getBounds().width;
+        yyh = ship.getBounds().height;
+        
+        left_rect = new Rectangle(game_rect.x, game_rect.y + game_rect.height, -100,-300);
+        right_rect = new Rectangle(game_rect.x + game_rect.width, game_rect.y, 500, game_rect.y + game_rect.height);
+        aliens_rect = new Rectangle(alien[0][0].getBounds().x, alien[0][0].getBounds().y, (alien[0][0].getBounds().x * ALIENROWS), (alien[0][0].getBounds().y * ALIENCOLUMNS));
+        
+        ship_polygon = "SRID=4326;POLYGON((" + xx + " " + yy + ", " + xx + " " + (yy + yyh) + ", " + (xx + xxw) + " " + (yy + yyh) + ", " + (xx + xxw) + " " + yy + ", " + xx + " " + yy + "))";
+        alien_polygon = "SRID=4326;POLYGON((" + aliens_rect.x + " " + aliens_rect.y + ", " + (aliens_rect.x + aliens_rect.width) + " " + aliens_rect.y + ", " + (aliens_rect.x + aliens_rect.width) + " " + (aliens_rect.y + aliens_rect.height) + ", " + aliens_rect.x + " " + (aliens_rect.y + aliens_rect.height) + ", " + aliens_rect.x + " " + aliens_rect.y + "))";
+        
+        PreparedStatement pst_ship = null;
+        PreparedStatement pst_alien = null;
+        Connection c = null;
+        Statement stmt = null;
+        ResultSet rs = null;
+        //Database connection
+        ship_table = "INSERT INTO ship (name, polygon, color, total_points, x_cor, y_cor, coordinates, elapsed_time) values (?, ?, ?, ?, ?, ?, ?, ?)";
+        alien_table = "INSERT INTO alien (name, polygon, color, total, remaining) values (?, ?, ?, ?, ?)";
+
+        try {
+        	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
+        	
+        	//Ship table
+			pst_ship = c.prepareStatement(ship_table);
+			pst_ship.setString(1, ship_name);
+			pst_ship.setObject(2, new PGgeometry(ship_polygon));
+			pst_ship.setString(3, color_ship);
+			pst_ship.setInt(4, pts);
+			pst_ship.setInt(5, ship.getX());
+			pst_ship.setInt(6, ship.getY());
+			pst_ship.setString(7, coordinates);
+			pst_ship.setInt(8, elapsedTime);
+			pst_ship.executeUpdate();
+			
+			//Alien table
+			pst_alien = c.prepareStatement(alien_table);
+			pst_alien.setString(1, alien_name);
+			pst_alien.setObject(2, new PGgeometry(alien_polygon));
+			pst_alien.setString(3, color_alien);
+			pst_alien.setInt(4, (ALIENCOLUMNS * ALIENROWS));
+			pst_alien.setInt(5, aliensLeft);
+			pst_alien.executeUpdate();
+
+	        stmt = c.createStatement();
+	        rs = stmt.executeQuery("SELECT ST_DISTANCE(a.polygon, s.polygon) as Distance FROM ship s, alien a;");
+	        while ( rs.next() ) {
+	           result_distance = rs.getFloat("Distance");
+	        }
+	        rs = stmt.executeQuery("SELECT ST_AREA(polygon) as SHIP_AREA from ship;");
+	        while(rs.next()){
+ 	           result_area = rs.getFloat("SHIP_AREA");
+	        }
+			stmt.close();
+		} catch (SQLException ex) {
+			// TODO Auto-generated catch block
+			ex.printStackTrace();
+		} finally {
+			try {
+                if (pst_ship != null && pst_alien != null) {
+                    pst_ship.close();
+                    pst_alien.close();
+                }
+                if (c != null) {
+                    c.close();
+                }
+
+            } catch (SQLException ex) {
+                
+            }
+		}
+		try {
+			rs.close();
+		} catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
     }
 
     private class Listener extends KeyAdapter{
@@ -262,13 +405,10 @@ public class Board extends JPanel implements ActionListener {
     public void gameOver(int status){
         gameEnded = true;
         if(status == 0){
-            msg = "You lose!";
-        	gameWon = false;
+            gameWon = false;
         }else{
-            msg = "You won!";
             gameWon = true;
         }
-        msg += " - Press [ENTER] to play again.";
         timer.stop();
     }
 }

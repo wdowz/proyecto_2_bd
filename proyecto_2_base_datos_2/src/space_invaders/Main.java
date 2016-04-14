@@ -7,7 +7,6 @@ import javax.swing.JFrame;
  * @author wdowz
  */
 public class Main extends JFrame {
-
     /**
 	 * 
 	 */
@@ -17,7 +16,7 @@ public class Main extends JFrame {
         add(new Board());
         setTitle("Space Invaders");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(450,300);
+        setSize(450,400);
         setLocationRelativeTo(null);
         setVisible(true);
         setResizable(false);
