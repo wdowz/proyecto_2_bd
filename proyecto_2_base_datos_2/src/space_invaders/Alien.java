@@ -12,7 +12,7 @@ import java.util.ArrayList;
  */
 public class Alien {
     private Image image;
-    private int x, y, speed, direction, movedX, movedY, wentDown, bombChance;
+    private int x, y, speed, direction, movedX, movedY, bombChance;
     private final int RANGE;
     private boolean visible, goDown;
     private Random random;
@@ -29,7 +29,6 @@ public class Alien {
         visible = true;
         goDown = false;
         movedY = 0;
-        wentDown = 0;
         random = new Random();
         bombChance = 700; // 1 in 40
         bombs = new ArrayList<Bomb>();
@@ -89,7 +88,6 @@ public class Alien {
             {
                 goDown = false;
                 movedY = 0;
-                wentDown++;
             }
         } else {
             x += speed * direction;
