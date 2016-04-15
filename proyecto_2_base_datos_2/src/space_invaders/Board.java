@@ -20,6 +20,9 @@ import java.awt.event.ActionEvent;
 // teclas
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -44,7 +47,7 @@ public class Board extends JPanel implements ActionListener {
     private Alien alien[][];
     private final int ALIENCOLUMNS, ALIENROWS, ALIEN_STARTX, ALIEN_STARTY, ALIEN_PADDING;
     private Font font;
-    private String distance, coordinates, area, points, bullets, collision, status, color_ship, color_alien, aliens, time, game, ship_table, alien_table, ship_polygon, left_rect_polygon, right_rect_polygon, alien_polygon, figure_table, count_collisions;
+    private String image, distance, coordinates, area, points, bullets, collision, status, color_ship, color_alien, aliens, time, game, ship_table, alien_table, ship_polygon, left_rect_polygon, right_rect_polygon, alien_polygon, figure_table, count_collisions;
     private int aliensLeft, pts, POINTS, xx, yy, xxw, yyh, elapsedTime, countcollision;
     private boolean gameEnded, collisioned, gameWon;
     private StopWatch sw;
@@ -53,10 +56,14 @@ public class Board extends JPanel implements ActionListener {
     
     private PreparedStatement pst_ship = null;
     private PreparedStatement pst_alien = null;
-    PreparedStatement pst_figure = null;
+    private PreparedStatement pst_figure = null;
+    private PreparedStatement pst_image = null;
     private Connection c = null;
     private Statement stmt = null;
     private ResultSet rs = null;
+    
+    private File file;
+    private FileInputStream fis;
     
     public Board(){
         setDoubleBuffered(true);
@@ -115,7 +122,18 @@ public class Board extends JPanel implements ActionListener {
         left_rect_polygon = "SRID=4326;POLYGON((" + game_rect.x + " " + game_rect.y + ", " + game_rect.x + " " + 600 + ", " + -400 + " " + 600 + ", " + -400 + " " + game_rect.y + ", " + game_rect.x + " " + game_rect.y + "))";
         right_rect_polygon = "SRID=4326;POLYGON((" + (game_rect.x + game_rect.width) + " " + game_rect.y + ", " + 700 + " " + game_rect.y + ", " + 700 + " " + 600 + ", " + (game_rect.x + game_rect.width) + " " + 600 + ", " + (game_rect.x + game_rect.width) + " " + game_rect.y + "))";
         
-        figure_table = "INSERT INTO figure (name, polygon) values ('Square', ?)";
+        figure_table = "INSERT INTO figure (name, polygon) values ('Square', ?);";
+        image = "INSERT INTO image (imgname, img) values (?, ?);";
+        
+        file = new File("C:\\ship.png");
+        try {
+			fis = new FileInputStream(file);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+        
         
         try {
         	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
@@ -133,6 +151,33 @@ public class Board extends JPanel implements ActionListener {
 			try {
                 if (pst_figure != null) {
                 	pst_figure.close();
+                }
+                if (c != null) {
+                    c.close();
+                }
+
+            } catch (SQLException ex) {
+                
+            }
+		}
+        
+        try {
+        	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
+        	
+        	//Figure table
+        	pst_image = c.prepareStatement(image);
+			pst_image.setString(1, file.getName());
+			pst_image.setBinaryStream(2, fis, (int)file.length());
+			pst_image.executeUpdate();
+			
+			
+		} catch (SQLException ex) {
+			// TODO Auto-generated catch block
+			ex.printStackTrace();
+		} finally {
+			try {
+                if (pst_image != null) {
+                	pst_image.close();
                 }
                 if (c != null) {
                     c.close();
