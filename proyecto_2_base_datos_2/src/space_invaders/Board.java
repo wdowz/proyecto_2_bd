@@ -437,11 +437,6 @@ public class Board extends JPanel implements ActionListener {
         
     }
     
-    public void update(){
-    	
-
-    }
-    
     private class Listener extends KeyAdapter{
         @Override
         public void keyPressed(KeyEvent e){
