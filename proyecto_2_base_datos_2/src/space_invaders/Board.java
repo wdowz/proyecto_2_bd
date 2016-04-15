@@ -115,7 +115,7 @@ public class Board extends JPanel implements ActionListener {
         left_rect_polygon = "SRID=4326;POLYGON((" + game_rect.x + " " + game_rect.y + ", " + game_rect.x + " " + 600 + ", " + -400 + " " + 600 + ", " + -400 + " " + game_rect.y + ", " + game_rect.x + " " + game_rect.y + "))";
         right_rect_polygon = "SRID=4326;POLYGON((" + (game_rect.x + game_rect.width) + " " + game_rect.y + ", " + 700 + " " + game_rect.y + ", " + 700 + " " + 600 + ", " + (game_rect.x + game_rect.width) + " " + 600 + ", " + (game_rect.x + game_rect.width) + " " + game_rect.y + "))";
         
-        figure_table = "INSERT INTO figure (polygon) values (?)";
+        figure_table = "INSERT INTO figure (name, polygon) values ('Square', ?)";
         
         try {
         	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
@@ -179,8 +179,9 @@ public class Board extends JPanel implements ActionListener {
     			try{
     				
     				//Database connection
-    		        ship_table = "INSERT INTO ship (polygon, color, total_points, x_cor, y_cor, coordinates, elapsed_time) values (?, ?, ?, ?, ?, ?, ?)";
-    		        alien_table = "INSERT INTO alien (polygon, color, total, remaining) values (?, ?, ?, ?)";
+    				//Preparar los queries para luego asignarles una variable antes de introducir los datos
+    		        ship_table = "INSERT INTO ship (name, polygon, color, total_points, x_cor, y_cor, coordinates, elapsed_time) values ('Square', ?, ?, ?, ?, ?, ?, ?)";
+    		        alien_table = "INSERT INTO alien (name, polygon, color, total, remaining) values ('Square', ?, ?, ?, ?)";
 
     		        try {
     		        	c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/space_invaders", "postgres", "123456789");
